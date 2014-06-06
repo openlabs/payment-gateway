@@ -19,6 +19,8 @@ from trytond.wizard import Wizard, StateView, StateTransition, \
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError
 from trytond.model import ModelSQL, ModelView, Workflow, fields
+from trytond.config import CONFIG
+from nereid import render_email
 
 
 __all__ = [
@@ -555,6 +557,54 @@ class PaymentTransaction(Workflow, ModelSQL, ModelView):
     @ModelView.button_action('payment_gateway.wizard_transaction_use_card')
     def use_card(cls, transactions):
         pass
+
+    def get_email_template(self, type):
+        """
+        Returns the email template as a tuple of the form
+        (text_template, html_template).
+        You must override this function to return your email templates
+        either text-template or html-template.
+
+        :param type: Transaction status, 'posted' or 'failed'
+        """
+        return (None, None)
+
+    def send_email_notification(self, attachments=None, **context):
+        """
+        Depending on the state of transaction, this method sends
+        transaction success and failure emails. The emails are stored
+        in an Email Queue which automatically sends these emails.
+
+        :param attachments: A dict of filename:string as key value pair
+                            [preferable file buffer streams]
+        :param context: Context for email template.
+
+        Note: To use a self defined subject for email, add subject to
+        context with key as 'subject'
+        """
+        EmailQueue = Pool().get('email.queue')
+
+        text_template, html_template = self.get_email_template(self.state)
+        subject = "Transaction Successful" if self.state == "posted" \
+            else "Transaction Failed"
+
+        if not self.party.email:
+            return
+
+        if not (text_template or html_template):
+            return
+
+        email_message = render_email(
+            CONFIG['smtp_from'], self.party.email,
+            context.pop('subject', subject),
+            text_template=text_template, html_template=html_template,
+            attachments=attachments, context=context,
+        )
+
+        EmailQueue.queue_mail(
+            CONFIG['smtp_from'], self.party.email,
+            email_message.as_string()
+        )
 
 
 class TransactionLog(ModelSQL, ModelView):

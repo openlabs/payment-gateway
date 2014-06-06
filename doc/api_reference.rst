@@ -53,6 +53,8 @@ Methods
 ```````
 
 .. automethod:: PaymentTransaction.safe_post
+.. automethod:: PaymentTransaction.send_email_notification
+.. automethod:: PaymentTransaction.get_email_template
 
 `payment_gateway.transaction.log`
 ---------------------------------

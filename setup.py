@@ -35,6 +35,7 @@ requires = [
 MODULE = 'payment_gateway'
 PREFIX = 'openlabs'
 MODULE2PREFIX = {
+    'email_queue': 'openlabs',
 }
 
 for dep in info.get('depends', []):
